@@ -16,7 +16,6 @@
         .mono { font-family: 'Space Mono', monospace; }
         ::-webkit-scrollbar { display: none; }
 
-        /* Effet néon blanc clignotant */
         @keyframes neonBlinkWhite {
             0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
                 text-shadow: 0 0 4px rgba(255, 255, 255, 0.2), 0 0 11px rgba(255, 255, 255, 0.4), 0 0 19px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.4);
@@ -27,16 +26,14 @@
                 color: #94a3b8;
             }
         }
-        .neon-blink {
-            animation: neonBlinkWhite 3s infinite;
-        }
+        .neon-blink { animation: neonBlinkWhite 3s infinite; }
     </style>
 </head>
 <body class="text-slate-200 min-h-screen flex flex-col justify-between select-none">
 
     <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden font-bold px-4 py-3 rounded-xl shadow-2xl text-xs"></div>
 
-    <!-- ================= 1. ÉCRAN AUTHENTIFICATION (CONNEXION / INSCRIPTION) ================= -->
+    <!-- ================= 1. ÉCRAN AUTHENTIFICATION ================= -->
     <div id="auth-screen" class="w-full max-w-md mx-auto bg-slate-900 min-h-screen p-6 flex flex-col justify-center items-center space-y-6">
         <div class="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
             
@@ -48,13 +45,11 @@
                 <p class="text-xs text-slate-400">Connectez-vous ou créez votre boutique</p>
             </div>
 
-            <!-- SWITCH ONGLETS -->
             <div class="grid grid-cols-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
                 <button onclick="switchAuthTab('login')" id="btn-tab-login" class="py-2.5 text-xs font-bold rounded-lg bg-amber-500 text-slate-950 transition">Connexion</button>
                 <button onclick="switchAuthTab('register')" id="btn-tab-register" class="py-2.5 text-xs font-bold rounded-lg text-slate-400 transition">Inscription</button>
             </div>
 
-            <!-- FORMULAIRE CONNEXION -->
             <div id="form-login" class="space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-medium">Identifiant de Boutique</label>
@@ -69,7 +64,6 @@
                 </button>
             </div>
 
-            <!-- FORMULAIRE INSCRIPTION -->
             <div id="form-register" class="hidden space-y-4">
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-medium">Identifiant Unique (sans espaces)</label>
@@ -99,8 +93,7 @@
         </div>
     </div>
 
-
-    <!-- ================= 2. APPLICATION PRINCIPALE (CAISSE & STOCK) ================= -->
+    <!-- ================= 2. APPLICATION PRINCIPALE ================= -->
     <div id="app-screen" class="hidden w-full max-w-md mx-auto bg-slate-900 min-h-screen shadow-2xl flex flex-col justify-between relative pb-20">
         
         <header class="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center sticky top-0 z-10">
@@ -110,7 +103,7 @@
                 </div>
                 <div>
                     <h1 class="text-sm font-bold text-white tracking-wide" id="header-shop-name">MA BOUTIQUE</h1>
-                    <span class="text-[10px] text-emerald-400 font-medium">🟢 Synchro Cloud Active</span>
+                    <span class="text-[10px] text-emerald-400 font-medium">🟢 Synchro GitHub Active</span>
                 </div>
             </div>
             <button onclick="logout()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs" title="Changer de boutique">
@@ -119,7 +112,6 @@
         </header>
 
         <main class="flex-grow p-4 overflow-y-auto">
-            
             <section id="tab-sales" class="space-y-4">
                 <div class="flex justify-between items-center">
                     <h2 class="text-base font-bold text-white">🛍️ Caisse & Ventes</h2>
@@ -184,8 +176,8 @@
                             <p class="text-lg font-bold text-white mt-1" id="daily-sales-count">0</p>
                         </div>
                         <div class="bg-slate-900 p-3 rounded-xl">
-                            <span class="text-[10px] text-slate-400">Statut App</span>
-                            <p class="text-xs font-bold text-amber-400 mt-2">Connecté</p>
+                            <span class="text-[10px] text-slate-400">Statut Synchro</span>
+                            <p class="text-xs font-bold text-emerald-400 mt-2">GitHub Actif</p>
                         </div>
                     </div>
                 </div>
@@ -278,31 +270,93 @@
         </div>
     </div>
 
-
     <script>
+        // CONFIGURATION GITHUB API
+        const GH_USER = "Blackbang145";
+        const GH_REPO = "blackbang-caisse";
+        const GH_TOKEN = "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";
+        const GH_FILE = "database.json";
+
+        let db = { merchants: [], stocks: {}, tickets: {} };
         let currentShopId = localStorage.getItem('saas_logged_shop_id');
         let products = [];
         let cart = [];
         let qrScanner = null;
 
-        checkDailyReset();
-
-        if (currentShopId) {
-            initStoreSession(currentShopId);
+        // Charger les données depuis GitHub au démarrage
+        async function loadCloudDB() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+                    headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+                    db = content;
+                    // Sauvegarde locale pour usage instantané
+                    localStorage.setItem('gh_sha', data.sha);
+                    checkDailyReset();
+                    if (currentShopId) initStoreSession(currentShopId);
+                }
+            } catch (e) {
+                console.log("Mode hors-ligne / Erreur chargement GitHub", e);
+            }
         }
+
+        // Sauvegarder les données sur GitHub
+        async function saveCloudDB() {
+            try {
+                // Récupérer le SHA actuel requis par l'API GitHub pour mettre à jour un fichier
+                let sha = localStorage.getItem('gh_sha');
+                if (!sha) {
+                    const checkRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+                        headers: { 'Authorization': `token ${GH_TOKEN}` }
+                    });
+                    if (checkRes.ok) {
+                        const fileData = await checkRes.json();
+                        sha = fileData.sha;
+                        localStorage.setItem('gh_sha', sha);
+                    }
+                }
+
+                const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
+                const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GH_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: "Mise à jour des données caisse/stock",
+                        content: contentEncoded,
+                        sha: sha
+                    })
+                });
+
+                if (res.ok) {
+                    const resData = await res.json();
+                    localStorage.setItem('gh_sha', resData.content.sha);
+                }
+            } catch (e) {
+                console.log("Erreur de sauvegarde GitHub", e);
+            }
+        }
+
+        loadCloudDB();
 
         function checkDailyReset() {
             const today = new Date().toLocaleDateString('fr-FR');
             const lastDate = localStorage.getItem('saas_last_reset_date');
             if (lastDate !== today) {
-                let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-                merchants.forEach(m => {
-                    m.revenue = 0;
-                    m.salesCount = 0;
-                    if (!m.history) m.history = {};
-                    m.history[today] = 0;
-                });
-                localStorage.setItem('saas_all_merchants', JSON.stringify(merchants));
+                if (db.merchants) {
+                    db.merchants.forEach(m => {
+                        m.revenue = 0;
+                        m.salesCount = 0;
+                        if (!m.history) m.history = {};
+                        m.history[today] = 0;
+                    });
+                    saveCloudDB();
+                }
                 localStorage.setItem('saas_last_reset_date', today);
             }
         }
@@ -329,13 +383,13 @@
             }
         }
 
-        function handleLogin() {
+        async function handleLogin() {
             const id = document.getElementById('login-id').value.trim().toLowerCase().replace(/\s+/g, '_');
             const pwd = document.getElementById('login-pwd').value;
             if (!id || !pwd) return notify("Veuillez remplir tous les champs.");
 
-            let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-            let found = merchants.find(m => m.id === id);
+            await loadCloudDB();
+            let found = db.merchants.find(m => m.id === id);
 
             if (!found) return notify("Aucune boutique trouvée.");
             if (found.password && found.password !== pwd) return notify("Mot de passe incorrect.");
@@ -345,7 +399,7 @@
             initStoreSession(id);
         }
 
-        function handleRegister() {
+        async function handleRegister() {
             const id = document.getElementById('reg-id').value.trim().toLowerCase().replace(/\s+/g, '_');
             const name = document.getElementById('reg-name').value.trim();
             const owner = document.getElementById('reg-owner').value.trim();
@@ -354,32 +408,31 @@
 
             if (!id || !name || !owner || !password) return notify("Veuillez remplir tous les champs obligatoires.");
 
-            let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-            if (merchants.some(m => m.id === id)) return notify("Cet identifiant est déjà pris.");
+            await loadCloudDB();
+            if (db.merchants.some(m => m.id === id)) return notify("Cet identifiant est déjà pris.");
 
             const today = new Date().toLocaleDateString('fr-FR');
 
             if (logoInput.files && logoInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    saveMerchantAccount(id, name, owner, password, e.target.result, merchants, today);
+                reader.onload = async function(e) {
+                    await saveMerchantAccount(id, name, owner, password, e.target.result, today);
                 };
                 reader.readAsDataURL(logoInput.files[0]);
             } else {
-                saveMerchantAccount(id, name, owner, password, "BLACK°BANG (1)-Photoroom.png", merchants, today);
+                await saveMerchantAccount(id, name, owner, password, "BLACK°BANG (1)-Photoroom.png", today);
             }
         }
 
-        function saveMerchantAccount(id, name, owner, password, logo, merchants, today) {
-            merchants.push({ 
+        async function saveMerchantAccount(id, name, owner, password, logo, today) {
+            db.merchants.push({ 
                 id, name, owner, password, logo, status: 'active', revenue: 0, salesCount: 0, 
                 history: { [today]: 0 } 
             });
-            localStorage.setItem('saas_all_merchants', JSON.stringify(merchants));
+            if (!db.stocks) db.stocks = {};
+            db.stocks[id] = []; 
 
-            let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-            shopsStock[id] = []; 
-            localStorage.setItem('saas_all_shops_stock', JSON.stringify(shopsStock));
+            await saveCloudDB();
 
             localStorage.setItem('saas_logged_shop_id', id);
             notify("Boutique créée avec succès !", false);
@@ -391,9 +444,7 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
 
-            let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-            let shop = merchants.find(m => m.id === shopId);
-            
+            let shop = db.merchants.find(m => m.id === shopId);
             if (shop) {
                 document.getElementById('header-shop-name').innerText = shop.name;
                 const logoContainer = document.getElementById('header-logo-container');
@@ -402,8 +453,8 @@
                 }
             }
 
-            let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-            products = shopsStock[shopId] || [];
+            if (!db.stocks) db.stocks = {};
+            products = db.stocks[shopId] || [];
 
             renderProducts();
             renderStock();
@@ -483,7 +534,7 @@
             });
         }
 
-        function validateSale() {
+        async function validateSale() {
             if (cart.length === 0) return alert("Panier vide");
             const clientName = document.getElementById('client-name').value.trim() || "Client";
             const clientContact = document.getElementById('client-contact').value.trim() || "N/A";
@@ -495,31 +546,28 @@
                 if (p) p.stock = Math.max(0, p.stock - item.qty);
             });
 
-            let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-            shopsStock[currentShopId] = products;
-            localStorage.setItem('saas_all_shops_stock', JSON.stringify(shopsStock));
+            if (!db.stocks) db.stocks = {};
+            db.stocks[currentShopId] = products;
 
             const today = new Date().toLocaleDateString('fr-FR');
-            let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-            let shop = merchants.find(m => m.id === currentShopId);
+            let shop = db.merchants.find(m => m.id === currentShopId);
             if (shop) {
                 shop.revenue = (shop.revenue || 0) + totalAmount;
                 shop.salesCount = (shop.salesCount || 0) + 1;
                 if (!shop.history) shop.history = {};
                 shop.history[today] = (shop.history[today] || 0) + totalAmount;
-                localStorage.setItem('saas_all_merchants', JSON.stringify(merchants));
             }
 
-            let shopsTickets = JSON.parse(localStorage.getItem('saas_all_shops_tickets')) || {};
-            if (!shopsTickets[currentShopId]) shopsTickets[currentShopId] = [];
+            if (!db.tickets) db.tickets = {};
+            if (!db.tickets[currentShopId]) db.tickets[currentShopId] = [];
             const ticketId = Math.floor(100000 + Math.random() * 900000);
             const dateStr = today + ' ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             
-            shopsTickets[currentShopId].unshift({ ticketId, dateStr, clientName, clientContact, clientLieu, totalAmount, items: [...cart] });
-            localStorage.setItem('saas_all_shops_tickets', JSON.stringify(shopsTickets));
+            db.tickets[currentShopId].unshift({ ticketId, dateStr, clientName, clientContact, clientLieu, totalAmount, items: [...cart] });
+
+            await saveCloudDB();
 
             document.getElementById('rec-shop-title').innerText = shop ? shop.name : "BOUTIQUE";
-            
             const recLogoBox = document.getElementById('rec-logo-box');
             if (shop && shop.logo) {
                 recLogoBox.innerHTML = `<img src="${shop.logo}" alt="Logo" class="w-16 h-16 object-contain mx-auto mb-1">`;
@@ -570,26 +618,26 @@
             });
         }
 
-        function updateStock(id, val) {
+        async function updateStock(id, val) {
             const p = products.find(x => x.id === id);
             if (p) {
                 let newStock = parseInt(val, 10);
                 if (isNaN(newStock) || newStock < 0) newStock = 0;
                 p.stock = newStock;
-                let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-                shopsStock[currentShopId] = products;
-                localStorage.setItem('saas_all_shops_stock', JSON.stringify(shopsStock));
+                if (!db.stocks) db.stocks = {};
+                db.stocks[currentShopId] = products;
+                await saveCloudDB();
                 renderStock();
                 renderProducts();
             }
         }
 
-        function deleteProduct(id) {
+        async function deleteProduct(id) {
             if (confirm("Voulez-vous vraiment supprimer cet article ?")) {
                 products = products.filter(p => p.id !== id);
-                let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-                shopsStock[currentShopId] = products;
-                localStorage.setItem('saas_all_shops_stock', JSON.stringify(shopsStock));
+                if (!db.stocks) db.stocks = {};
+                db.stocks[currentShopId] = products;
+                await saveCloudDB();
                 renderStock();
                 renderProducts();
                 notify("Article supprimé avec succès !");
@@ -608,7 +656,7 @@
             document.getElementById('add-product-modal').classList.add('hidden');
         }
 
-        function saveNewProduct() {
+        async function saveNewProduct() {
             const brand = document.getElementById('new-brand').value.trim();
             const name = document.getElementById('new-name').value.trim();
             let price = parseFloat(document.getElementById('new-price').value);
@@ -623,9 +671,9 @@
             const newId = Date.now().toString();
             products.push({ id: newId, brand, name, price, stock });
 
-            let shopsStock = JSON.parse(localStorage.getItem('saas_all_shops_stock')) || {};
-            shopsStock[currentShopId] = products;
-            localStorage.setItem('saas_all_shops_stock', JSON.stringify(shopsStock));
+            if (!db.stocks) db.stocks = {};
+            db.stocks[currentShopId] = products;
+            await saveCloudDB();
 
             closeAddProductModal();
             renderStock();
@@ -634,8 +682,7 @@
         }
 
         function updateBilan() {
-            let merchants = JSON.parse(localStorage.getItem('saas_all_merchants')) || [];
-            let shop = merchants.find(m => m.id === currentShopId);
+            let shop = db.merchants.find(m => m.id === currentShopId);
             if (shop) {
                 document.getElementById('daily-revenue-val').innerText = (shop.revenue || 0).toLocaleString() + " XOF";
                 document.getElementById('daily-sales-count').innerText = shop.salesCount || 0;
@@ -661,13 +708,6 @@
 
         function closeReceipt() {
             document.getElementById('receipt-modal').classList.add('hidden');
-        }
-
-        // Chargement sécurisé du Service Worker PWA (seulement si le fichier sw.js existe)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
-            });
         }
     </script>
 </body>
