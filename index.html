@@ -11,6 +11,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f19; -webkit-tap-highlight-color: transparent; }
         .mono { font-family: 'Space Mono', monospace; }
@@ -33,6 +37,7 @@
 
     <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden font-bold px-4 py-3 rounded-xl shadow-2xl text-xs"></div>
 
+    <!-- AUTH SCREEN -->
     <div id="auth-screen" class="w-full max-w-md mx-auto bg-slate-900 min-h-screen p-6 flex flex-col justify-center items-center space-y-6">
         <div class="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
             
@@ -92,6 +97,7 @@
         </div>
     </div>
 
+    <!-- APP SCREEN -->
     <div id="app-screen" class="hidden w-full max-w-md mx-auto bg-slate-900 min-h-screen shadow-2xl flex flex-col justify-between relative pb-20">
         
         <header class="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center sticky top-0 z-10">
@@ -101,7 +107,7 @@
                 </div>
                 <div>
                     <h1 class="text-sm font-bold text-white tracking-wide" id="header-shop-name">MA BOUTIQUE</h1>
-                    <span class="text-[10px] text-emerald-400 font-medium">🟢 Synchro GitHub Active</span>
+                    <span class="text-[10px] text-emerald-400 font-medium">🟢 Firebase Cloud Active</span>
                 </div>
             </div>
             <button onclick="logout()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs" title="Changer de boutique">
@@ -175,7 +181,7 @@
                         </div>
                         <div class="bg-slate-900 p-3 rounded-xl">
                             <span class="text-[10px] text-slate-400">Statut Synchro</span>
-                            <p class="text-xs font-bold text-emerald-400 mt-2">GitHub Actif</p>
+                            <p class="text-xs font-bold text-emerald-400 mt-2">Firebase Actif</p>
                         </div>
                     </div>
                 </div>
@@ -269,10 +275,19 @@
     </div>
 
     <script>
-        const GH_USER = "Blackbang145";
-        const GH_REPO = "blackbang-caisse";
-        const GH_TOKEN = "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";
-        const GH_FILE = "database.json";
+        // CONFIGURATION FIREBASE EXACTE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdBsTFLinVVbRUsSFQZPyA6lOrDiXOCJg",
+            authDomain: "blackbang-caisse.firebaseapp.com",
+            projectId: "blackbang-caisse",
+            storageBucket: "blackbang-caisse.firebasestorage.app",
+            messagingSenderId: "707218956174",
+            appId: "1:707218956174:web:07383d178fcb8abf708edf",
+            measurementId: "G-P3721TTVB0"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const dbFirestore = firebase.firestore();
 
         let db = { merchants: [], stocks: {}, tickets: {} };
         let currentShopId = localStorage.getItem('saas_logged_shop_id');
@@ -282,56 +297,25 @@
 
         async function loadCloudDB() {
             try {
-                const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
-                    headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
-                    cache: 'no-store'
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    db = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                    localStorage.setItem('gh_sha', data.sha);
+                const docRef = dbFirestore.collection("blackbang").doc("database");
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    db = doc.data();
                     checkDailyReset();
                     if (currentShopId) initStoreSession(currentShopId);
+                } else {
+                    await docRef.set({ merchants: [], stocks: {}, tickets: {} });
                 }
             } catch (e) {
-                console.log("Erreur chargement GitHub", e);
+                console.log("Erreur chargement Firebase", e);
             }
         }
 
         async function saveCloudDB() {
             try {
-                let sha = localStorage.getItem('gh_sha');
-                if (!sha) {
-                    const checkRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
-                        headers: { 'Authorization': `token ${GH_TOKEN}` }
-                    });
-                    if (checkRes.ok) {
-                        const fileData = await checkRes.json();
-                        sha = fileData.sha;
-                        localStorage.setItem('gh_sha', sha);
-                    }
-                }
-
-                const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
-                const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GH_TOKEN}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: "Mise à jour caisse",
-                        content: contentEncoded,
-                        sha: sha
-                    })
-                });
-
-                if (res.ok) {
-                    const resData = await res.json();
-                    localStorage.setItem('gh_sha', resData.content.sha);
-                }
+                await dbFirestore.collection("blackbang").doc("database").set(db);
             } catch (e) {
-                console.log("Erreur de sauvegarde GitHub", e);
+                console.log("Erreur de sauvegarde Firebase", e);
             }
         }
 
