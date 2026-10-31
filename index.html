@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>blackbang-caisse - Caisse & Stock Pro</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="BLACK°BANG (1)-Photoroom.png">
-    <link rel="icon" type="image/png" href="BLACK°BANG (1)-Photoroom.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -48,7 +42,7 @@
             
             <div class="text-center space-y-2">
                 <div class="w-20 h-20 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center overflow-hidden mx-auto shadow-lg">
-                    <img src="BLACK°BANG (1)-Photoroom.png" alt="Logo Blackbang" class="w-full h-full object-cover">
+                    <img src="BLACK°BANG (1)-Photoroom.png" alt="Logo Blackbang" class="w-full h-full object-cover" onerror="this.style.display='none'">
                 </div>
                 <h1 class="text-xl font-bold neon-blink tracking-wider uppercase mono">blackbang-caisse</h1>
                 <p class="text-xs text-slate-400">Connectez-vous ou créez votre boutique</p>
@@ -669,9 +663,11 @@
             document.getElementById('receipt-modal').classList.add('hidden');
         }
 
-        // Enregistrement du Service Worker PWA
+        // Chargement sécurisé du Service Worker PWA (seulement si le fichier sw.js existe)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(() => {});
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
         }
     </script>
 </body>
